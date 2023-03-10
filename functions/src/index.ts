@@ -16,7 +16,7 @@ const documentPath = "users/{uid}";
 const xField = "x";
 const yField = "y";
 const apiKey = "1234567890";
-const outputPath = "users/${uid}";
+const outputPath = "users/{uid}";
 const outputField = "hash";
 
 initializeApp();
