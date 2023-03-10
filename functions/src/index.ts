@@ -57,7 +57,7 @@ export const locationUpdate = firestore.document(documentPath)
 
 export const callableHash = onCall((data, context) => {
   if (context.auth == undefined) {
-    return {error: `Only authorized users are allowed to call this endpoint`}
+    return {error: "Only authorized users are allowed to call this endpoint"};
   }
   const x = data[xField];
   const y = data[yField];
