@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwnDocument(docId) {
+      return request.auth.uid == docId;
+    }
+    match /users/{uid} {
+      allow read, write: if isOwnDocument(uid);
+    }
+  }
+}
