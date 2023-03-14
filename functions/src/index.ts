@@ -2,21 +2,12 @@ import {firestore} from "firebase-functions";
 import {initializeApp} from "firebase-admin/app";
 import {GeoHashService, ResultStatusCode} from "./fake-geohash-service";
 import {onCall} from "firebase-functions/v1/https";
-import {fieldValueExists, insertParamsIntoPath, shouldCompute} from "./utils";
-import {getFirestore} from "firebase-admin/firestore";
-// // Start writing functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-// export const helloWorld = functions.https.onRequest((request, response) => {
-//   functions.logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+import {fieldValueExists} from "./utils";
 
 const documentPath = "users/{uid}";
 const xField = "x";
 const yField = "y";
 const apiKey = "1234567890";
-const outputPath = "users/${uid}";
 const outputField = "hash";
 
 initializeApp();
@@ -24,13 +15,11 @@ initializeApp();
 const service = new GeoHashService(apiKey);
 
 export const locationUpdate = firestore.document(documentPath)
-  .onWrite((change, context) => {
-    // checks if data was deleted or if it was a recursive call triggering
-    // this function to run
-    if (!shouldCompute(change, xField) && !shouldCompute(change, yField)) {
+  .onWrite((change) => {
+    // item deleted
+    if (change.after == null) {
       return 0;
     }
-
     // double check that both values exist for computation
     if (
       !fieldValueExists(change.after.data(), xField) ||
@@ -38,16 +27,17 @@ export const locationUpdate = firestore.document(documentPath)
     ) {
       return 0;
     }
-
     const x: number = change.after.data()![xField];
     const y: number = change.after.data()![yField];
-
     const hash = service.convertToHash(x, y);
-
-    const formattedOutputPath = insertParamsIntoPath(context, outputPath);
-
-    return getFirestore()
-      .doc(formattedOutputPath)
+    // This is to check whether the hash value has changed. If
+    // it hasn't we don't want to write to the DB again as it
+    // would create a recursive write loop
+    if(fieldValueExists(change.after.data(), outputField)
+      && change.after.data()![outputField] == hash) {
+      return 0;
+    }
+    return change.after.ref
       .update(
         {
           [outputField]: hash.hash,
@@ -57,7 +47,7 @@ export const locationUpdate = firestore.document(documentPath)
 
 export const callableHash = onCall((data, context) => {
   if (context.auth == undefined) {
-    return {error: `Only authorized users are allowed to call this endpoint`}
+    return {error: "Only authorized users are allowed to call this endpoint"};
   }
   const x = data[xField];
   const y = data[yField];
