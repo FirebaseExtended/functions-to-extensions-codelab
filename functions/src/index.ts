@@ -2,32 +2,22 @@ import {firestore} from "firebase-functions";
 import {initializeApp} from "firebase-admin/app";
 import {GeoHashService, ResultStatusCode} from "./fake-geohash-service";
 import {onCall} from "firebase-functions/v1/https";
-import {fieldValueExists, insertParamsIntoPath, shouldCompute} from "./utils";
-import {getFirestore} from "firebase-admin/firestore";
-// // Start writing functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-// export const helloWorld = functions.https.onRequest((request, response) => {
-//   functions.logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+import {fieldValueExists} from "./utils";
 
-const documentPath = "users/{uid}";
-const xField = "x";
-const yField = "y";
-const apiKey = "1234567890";
-const outputPath = "users/{uid}";
-const outputField = "hash";
+const documentPath = process.env.INPUTPATH!; // "users/{uid}";
+const xField = process.env.XFIELD!; // "xv";
+const yField = process.env.YFIELD!; // "yv";
+const apiKey = process.env.APIKEY!; // "1234567890";
+const outputField = process.env.OUTPUTFIELD!; // "hash";
 
 initializeApp();
 
 const service = new GeoHashService(apiKey);
 
 export const locationUpdate = firestore.document(documentPath)
-  .onWrite((change, context) => {
-    // checks if data was deleted or if it was a recursive call triggering
-    // this function to run
-    if (!shouldCompute(change, xField) && !shouldCompute(change, yField)) {
+  .onWrite((change) => {
+    // item deleted
+    if (change.after == null) {
       return 0;
     }
 
@@ -44,10 +34,15 @@ export const locationUpdate = firestore.document(documentPath)
 
     const hash = service.convertToHash(x, y);
 
-    const formattedOutputPath = insertParamsIntoPath(context, outputPath);
+    // This is to check whether the hash value has changed. If
+    // it hasn't we don't want to write to the DB again as it
+    // would create a recursive write loop
+    if(fieldValueExists(change.after.data(), outputField)
+      && change.after.data()![outputField] == hash) {
+      return 0;
+    }
 
-    return getFirestore()
-      .doc(formattedOutputPath)
+    return change.after.ref
       .update(
         {
           [outputField]: hash.hash,

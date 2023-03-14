@@ -1,0 +1,138 @@
+name: geohash-ext
+version: 0.0.1
+specVersion: v1beta  # Firebase Extensions specification version (do not edit)
+
+displayName: Latitude and Longitude to GeoHash converter
+description: A converter for changing your Latitude and Longitude coordinates to geohashes.
+
+license: Apache-2.0  # The license you want for the extension
+
+author:
+  authorName: Sparky
+  url: https://github.com/Firebase
+
+billingRequired: true
+
+params:
+  - param: LOCATION
+    label: Cloud Functions location
+    description: >-
+      Where do you want to deploy the functions created for this extension?
+      You usually want a location close to your database. Realtime Database
+      instances are located in `us-central1`. For help selecting a
+      location, refer to the [location selection
+      guide](https://firebase.google.com/docs/functions/locations).
+    type: select
+    options:
+      - label: Iowa (us-central1)
+        value: us-central1
+      - label: South Carolina (us-east1)
+        value: us-east1
+      - label: Northern Virginia (us-east4)
+        value: us-east4
+      - label: Belgium (europe-west1)
+        value: europe-west1
+      - label: London (europe-west2)
+        value: europe-west2
+      - label: Frankfurt (europe-west3)
+        value: europe-west3
+      - label: Hong Kong (asia-east2)
+        value: asia-east2
+      - label: Tokyo (asia-northeast1)
+        value: asia-northeast1
+    default: us-central1
+    required: true
+    immutable: true
+  - param: XFIELD
+    label: The X Field Name
+    description: >-
+      The X Field is also known as the **longitude** value. What does
+      your firestore instance refer to as the X value or the longitude
+      value. If no value is specified, the extension will search for
+      field 'x'.
+    type: string
+    validationRegex: ^\D([0-9a-zA-Z_.]{0,375})$
+    validationErrorMessage: >-
+      The field can only contain upper case or lower case letter, numbers,
+      _, and . characters and must less than 1500 bytes long. The field
+      must also not start with a number.
+    default: x
+    required: false
+    immutable: false
+    example: x
+  - param: YFIELD
+    label: The Y Field Name
+    description: >-
+      The Y Field is also known as the **latitude** value. What does
+      your firestore instance refer to as the Y value or the latitude
+      value. If no value is specified, the extension will search for
+      field 'y'.
+    type: string
+    validationRegex: ^\D([0-9a-zA-Z_.]{0,375})$
+    validationErrorMessage: >-
+      The field can only contain upper case or lower case letter, numbers,
+      _, and . characters and must less than 1500 bytes long. The field
+      must also not start with a number.
+    default: y
+    required: false
+    immutable: false
+    example: y
+  - param: INPUTPATH
+    label: The input document to listen to for changes
+    description: >-
+      This is the document where you will write an x and y value to. Once
+      that document has received a value, it will notify the extension to
+      calculate a geohash and store that in an output document in a certain
+      field. This accepts function [wildcard parameters](https://firebase.google.com/docs/functions/firestore-events#wildcards-parameters)
+    type: string
+    validationRegex: ^[^/]+(/[^/]*/[^/]*)*/[^/]+$
+    validationErrorMessage: >-
+      This must point to a document path, not a collection path from the root
+      of the database. It must also not start or end with a '/' character.
+    required: true
+    immutable: false
+    example: users/{uid}
+  - param: OUTPUTFIELD
+    label: Geohash field
+    description: >-
+      This specifies the field in the output document to store the geohash in.
+    type: string
+    validationRegex: ^\D([0-9a-zA-Z_.]{0,375})$
+    validationErrorMessage: >-
+      The field can only contain upper case or lower case letter, numbers,
+      _, and . characters and must less than 1500 bytes long. The field
+      must also not start with a number.
+    required: false
+    default: hash
+    immutable: false
+    example: hash
+  - param: APIKEY
+    label: GeohashService API Key
+    description: >-
+      Your geohash service API Key. Since this is a demo, and not a real
+      service, you can use : 1234567890.
+    type: secret
+    required: true
+    immutable: false
+
+resources:
+  - name: locationUpdate
+    type: firebaseextensions.v1beta.function
+    properties:
+      location: ${LOCATION}
+      eventTrigger:
+        eventType: providers/cloud.firestore/eventTypes/document.write
+        resource: projects/${PROJECT_ID}/databases/(default)/documents/${INPUTPATH}
+  - name: callableHash
+    type: firebaseextensions.v1beta.function
+    properties:
+      location: ${LOCATION}
+      httpsTrigger: {}
+
+roles:
+  - role: datastore.user
+    reason: Allows the extension to read / write to your Firestore instance.
+
+apis:
+  - apiName: secretmanager.googleapis.com
+    reason: The service used to store our sensitive API key
