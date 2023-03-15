@@ -1,0 +1,1 @@
+This is the starter code for the converting your Firebase Functions to Firebase Extensions codelab.
