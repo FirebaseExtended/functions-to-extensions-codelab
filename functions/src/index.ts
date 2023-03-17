@@ -50,6 +50,10 @@ export const locationUpdate = firestore.document(documentPath)
 
     const hash = service.convertToHash(x, y);
 
+    if(hash.hash == undefined) {
+      return 0;
+    }
+
     // This is to check whether the hash value has changed. If
     // it hasn't we don't want to write to the DB again as it
     // would create a recursive write loop
