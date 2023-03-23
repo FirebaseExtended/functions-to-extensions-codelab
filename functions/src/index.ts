@@ -21,8 +21,8 @@ import {onCall} from "firebase-functions/v1/https";
 import {fieldValueExists} from "./utils";
 
 const documentPath = "users/{uid}";
-const xField = "x";
-const yField = "y";
+const xField = "xv";
+const yField = "yv";
 const apiKey = "1234567890";
 const outputField = "hash";
 
